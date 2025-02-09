@@ -33,3 +33,20 @@ type Okul = {
 // Tipleri birleştirme:
 type ColorsOkul = Colors & Okul;
 
+// Map Tip Kullanımı
+
+const mymap = new Map<string, number>();
+mymap.set("okulnumarasi", 206);
+mymap.set("kimliknumarasi", 43096075430);
+console.log(mymap.get("okulnumarasi"));
+
+
+
+
+
+
+
+
+
+
+
