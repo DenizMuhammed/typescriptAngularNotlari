@@ -1,4 +1,7 @@
+/************************************************************************************************
+*************************************************************************************************/
 // 1# Any Tipi Hakkında:
+
 // Any (any) TypeScript'teki kaçış mekanizmasıdır. 
 // Bunu, kodunuzun dinamik ve JavaScript'e benzer olacağını belirtmek 
 // veya TypeScript'in tür sistemindeki kısıtlamaları aşmak için kullanabilirsiniz.
@@ -40,6 +43,8 @@ swap(pair);
 // unknown "En iyisinin ne olduğundan emin değilim, 
 // bu yüzden TypeScript'e türü söylemen gerekiyor" anlamına gelir.
 
+/************************************************************************************************
+*************************************************************************************************/
 // 2# Literaller Hakkında:
 
 // TypeScript, kaynak kodda yer alan sabit değerler (literal'lar) için
@@ -106,8 +111,212 @@ myUnchangingUser.name = "Raîssa";
 
 const exampleUsers = [{ name: "Brian" }, { name: "Fahrooq" }] as const;
 
+/************************************************************************************************
+*************************************************************************************************/
+// 3# Tür birleşimi Ve Kesişim
 
-// 3#
+// Tür birleşimleri, bir nesnenin birden fazla türde olabileceğini belirtmenin bir yoludur.
+
+type StringOrNumber = string | number;
+type ProcessStates = "open" | "closed";
+type OddNumbersUnderTen = 1 | 3 | 5 | 7 | 9;
+type AMessyUnion = "hello" | 156 | { error: true };
+
+// Eğer "open" ve "closed" gibi sabit değerlerin string yerine kullanımı size yeni geliyorsa,
+// şu kaynağa göz atabilirsiniz: example:literals
+
+// Farklı türleri bir birleşimde (union) bir araya getirebiliriz. 
+// Burada söylediğimiz şey, değerin bu türlerden biri olduğudur.
+
+// TypeScript, çalıştırma zamanında hangi değerin kullanılacağını
+// belirlemenizi size bırakır.
+
+// Ancak birleşimler bazen tür genişletmesi (type widening) nedeniyle etkisini kaybedebilir. 
+// Örneğin:
+
+type WindowStates = "open" | "closed" | "minimized" | string;
+
+// Üzerine geldiğinizde görebileceğiniz gibi, WindowStates yalnızca 
+// belirtilen üç değerden biri değil, genel olarak bir string türüne dönüşmüştür.
+// Bu konu hakkında daha fazla bilgi için: example:type-widening-and-narrowing
+
+// Eğer birleşimler "VEYA" (OR) anlamına geliyorsa, kesişimler (intersections) "VE" (AND) anlamına gelir. 
+// Kesişim türleri, iki türün birleşerek yeni bir tür oluşturmasıdır. 
+// Bu, tür bileşimini (composition) mümkün kılar.
+
+interface ErrorHandling {
+  success: boolean;
+  error?: { message: string };
+}
+
+interface ArtworksData {
+  artworks: { title: string }[];
+}
+
+interface ArtistsData {
+  artists: { name: string }[];
+}
+
+// Bu arayüzler, hem tutarlı bir hata yönetimi hem de kendi verilerini içeren 
+// yanıtlar oluşturmak için birleştirilebilir.
+
+type ArtworksResponse = ArtworksData & ErrorHandling;
+type ArtistsResponse = ArtistsData & ErrorHandling;
+
+// Örneğin:
+
+const handleArtistsResponse = (response: ArtistsResponse) => {
+  if (response.error) {
+    console.error(response.error.message);
+    return;
+  }
+
+  console.log(response.artists);
+};
+
+// Kesişim ve birleşim türlerinin birlikte kullanımı, bir nesnenin 
+// iki değerden birini içermesi gerektiği durumlarda oldukça faydalıdır.
+
+interface CreateArtistBioBase {
+  artistID: string;
+  thirdParty?: boolean;
+}
+
+type CreateArtistBioRequest = CreateArtistBioBase & ({ html: string } | { markdown: string });
+
+// Artık sadece artistID ve html veya markdown içeren bir istek oluşturabilirsiniz.
+
+const workingRequest: CreateArtistBioRequest = {
+  artistID: "banksy",
+  markdown: "Banksy, anonim bir İngiliz grafiti sanatçısıdır...",
+};
+
+const badRequest: CreateArtistBioRequest = {
+  artistID: "banksy",
+};
+
+/************************************************************************************************
+*************************************************************************************************/
+// 4# Unknown ve Never Hakkında:
+
+// Unknown
+// Unknown, mantığını anladığınızda birçok kullanım alanı bulabileceğiniz türlerden biridir. 
+// any türüne benzer şekilde çalışır, ancak önemli bir farkı vardır: 
+// any belirsizliğe izin verirken, unknown belirli olmayı gerektirir.
+
+// Bunu anlamanın iyi bir yolu, bir JSON ayrıştırıcısını sarmalamaktır. 
+// JSON verileri birçok farklı biçimde gelebilir ve JSON ayrıştırma fonksiyonunu yazan kişi 
+// verinin şeklini bilmez - ancak o fonksiyonu çağıran kişi bilmelidir.
+
+const jsonParser = (jsonString: string) => JSON.parse(jsonString);
+
+const myAccount = jsonParser(`{ "name": "Dorothea" }`);
+
+myAccount.name;
+myAccount.email;
+
+// jsonParser fonksiyonunun üzerine geldiğinizde, dönüş türünün any olduğunu görebilirsiniz. 
+// Bu yüzden myAccount da any türünde olur. Bunu jenerikler (generics) ile düzeltebiliriz, 
+// ancak unknown ile de düzeltebiliriz.
+
+const jsonParserUnknown = (jsonString: string): unknown => JSON.parse(jsonString);
+
+const myOtherAccount = jsonParserUnknown(`{ "name": "Samuel" }`);
+
+myOtherAccount.name;
+
+// myOtherAccount nesnesi, TypeScript’e türü belirtilene kadar kullanılamaz. 
+// Bu, API kullanıcılarının türleri önceden düşünmesini sağlamak için kullanılabilir.
+
+type User = { name: string };
+const myUserAccount = jsonParserUnknown(`{ "name": "Samuel" }`) as User;
+myUserAccount.name;
+
+// Unknown, oldukça kullanışlı bir araçtır. Daha fazla bilgi için şu kaynaklara göz atabilirsiniz:
+// https://mariusschulz.com/blog/the-unknown-type-in-typescript
+// https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-0.html#new-unknown-top-type
+
+// Never
+// TypeScript kod akışı analizini desteklediğinden, dilin mantıksal olarak asla gerçekleşmeyecek 
+// durumları temsil etmesi gerekir. Örneğin, bu fonksiyon hiçbir zaman bir değer döndüremez:
+
+const neverReturns = () => {
+  // İlk satırda hata fırlatırsa
+  throw new Error("Her zaman hata fırlatır, asla dönmez");
+};
+
+// Eğer türünün üzerine gelirseniz, (() => never) olduğunu görürsünüz, 
+// bu da fonksiyonun asla bir şey döndürmemesi gerektiğini ifade eder. 
+// Ancak yine de diğer değerler gibi atanabilir:
+
+const myValue = neverReturns();
+
+// Bir fonksiyonun hiçbir zaman dönmemesi, JavaScript çalışma zamanı 
+// ve tür kullanmayan API tüketicileriyle çalışırken faydalı olabilir.
+
+const validateUser = (user: User) => {
+  if (user) {
+    return user.name !== "NaN";
+  }
+
+  // Tür sistemine göre, bu kod yolu asla çalıştırılamaz,
+  // bu yüzden neverReturns ile uyumludur.
+
+  return neverReturns();
+};
+
+// Tür tanımları, fonksiyona bir kullanıcı nesnesi geçirilmesi gerektiğini belirtse de, 
+// JavaScript'teki kaçış noktaları nedeniyle bunu her zaman garanti edemezsiniz.
+
+// never döndüren bir fonksiyon kullanmak, mümkün olmaması gereken 
+// yerlerde ek kod eklemenize olanak tanır. 
+// Bu, daha iyi hata mesajları göstermek veya dosya/loop gibi kaynakları kapatmak için faydalıdır.
+
+// Never’ın en yaygın kullanım alanlarından biri, switch ifadelerinin 
+// kapsayıcı (exhaustive) olmasını sağlamaktır. 
+
+// Örneğin, aşağıda bir enum ve kapsayıcı bir switch ifadesi var. 
+// Enum’a yeni bir değer eklemeyi deneyin (örneğin Tulip?).
+
+enum Flower {
+  Rose,
+  Rhododendron,
+  Violet,
+  Daisy,
+}
+
+const flowerLatinName = (flower: Flower) => {
+  switch (flower) {
+    case Flower.Rose:
+      return "Rosa rubiginosa";
+    case Flower.Rhododendron:
+      return "Rhododendron ferrugineum";
+    case Flower.Violet:
+      return "Viola reichenbachiana";
+    case Flower.Daisy:
+      return "Bellis perennis";
+
+    default:
+      const _exhaustiveCheck: never = flower;
+      return _exhaustiveCheck;
+  }
+};
+
+// Yeni bir çiçek türü eklediğinizde, TypeScript hata verecektir 
+// çünkü yeni tür never ile uyumsuzdur.
+
+// Never’ın Birleşimlerde (Unions) Kullanımı
+
+// never, birleşim türlerinden (union types) otomatik olarak çıkarılır.
+
+type NeverIsRemoved = string | never | number;
+
+// NeverIsRemoved türüne bakarsanız, bunun string | number olduğunu görürsünüz. 
+// Bunun nedeni, çalışma zamanında never türüne sahip bir değerin atanamayacak olmasıdır.
+
+// Bu özellik, koşullu türler (conditional types) gibi konularda oldukça sık kullanılır.
+
+
 
 
 
